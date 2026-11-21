@@ -73,11 +73,15 @@ export function createRenderer(canvas) {
       ctx.strokeStyle = PALETTE.panelBorder;
       ctx.lineWidth = 4;
       ctx.strokeRect(px, PANEL.y, PANEL.width, PANEL.height);
-      ctx.fillStyle = PALETTE.accent;
-      ctx.font = `bold 22px ${FONT}`;
-      ctx.textAlign = 'left';
-      ctx.fillText(side === 0 ? 'A — LEFT' : 'B — RIGHT', px + 12, PANEL.y - 10);
     }
+    // Labels under each picture, like the entries the judge ranks highest:
+    // the left picture is the original, the right one hides the changes.
+    ctx.font = `bold 18px ${FONT}`;
+    ctx.textAlign = 'center';
+    ctx.fillStyle = PALETTE.muted;
+    ctx.fillText('ORIGINAL', PANEL_LEFT_X + PANEL.width / 2, PANEL.y + PANEL.height + 22);
+    ctx.fillStyle = PALETTE.accent;
+    ctx.fillText('SPOT THE CHANGES', PANEL_RIGHT_X + PANEL.width / 2, PANEL.y + PANEL.height + 22);
     // Markers for the differences already found, on both pictures.
     const list = levelDiffs(state.levelIndex);
     for (const i of state.found) {
@@ -144,9 +148,10 @@ export function createRenderer(canvas) {
     ctx.textAlign = 'center';
     ctx.fillText(`Level ${state.levelIndex + 1} · ${level.name}`, 640, 30);
     const total = levelDiffs(state.levelIndex).length;
-    ctx.fillStyle = state.found.length === total ? PALETTE.green : PALETTE.accent;
+    const left = total - state.found.length;
+    ctx.fillStyle = left === 0 ? PALETTE.green : PALETTE.accent;
     ctx.font = `bold 26px ${FONT}`;
-    ctx.fillText(`FOUND ${state.found.length} / ${total}`, 640, 58);
+    ctx.fillText(left === 0 ? 'ALL FOUND!' : `${left} LEFT TO FIND`, 640, 58);
     ctx.fillStyle = PALETTE.text;
     ctx.font = `bold 20px ${FONT}`;
     ctx.textAlign = 'right';
@@ -154,16 +159,19 @@ export function createRenderer(canvas) {
     ctx.fillStyle = PALETTE.muted;
     ctx.font = `15px ${FONT}`;
     ctx.fillText(`BEST ${best}`, 1260, 54);
-    // Clock bar under the header.
+    // Clock bar under the header, with the time in a pill in its middle.
     const frac = Math.max(0, state.timeLeft / LEVEL_SECONDS);
     ctx.fillStyle = '#2c2547';
-    ctx.fillRect(0, 64, FIELD.width, 12);
+    ctx.fillRect(0, 64, FIELD.width, 20);
     ctx.fillStyle = frac > 0.33 ? PALETTE.green : PALETTE.red;
-    ctx.fillRect(0, 64, FIELD.width * frac, 12);
+    ctx.fillRect(0, 64, FIELD.width * frac, 20);
+    ctx.fillStyle = '#221d38';
+    roundRect(588, 64, 104, 20, 10);
+    ctx.fill();
     ctx.fillStyle = PALETTE.text;
-    ctx.font = `bold 12px ${FONT}`;
-    ctx.textAlign = 'right';
-    ctx.fillText(formatTime(state.timeLeft), 1260, 75);
+    ctx.font = `bold 15px ${FONT}`;
+    ctx.textAlign = 'center';
+    ctx.fillText(formatTime(state.timeLeft), 640, 79);
   }
 
   function drawButton(rect, label, enabled) {
@@ -187,11 +195,14 @@ export function createRenderer(canvas) {
     ctx.font = `16px ${FONT}`;
     ctx.textAlign = 'left';
     ctx.fillText(`Mistakes ${state.mistakes}   Streak x${state.streak}   Sound ${muted ? 'OFF' : 'ON'}`, 600, 640);
-    if (state.foundLabel) {
+    // Everything found so far, by name — the strip the top entries all show.
+    if (state.found.length > 0) {
+      const list = levelDiffs(state.levelIndex);
+      const names = state.found.map((i) => list[i].label).join(' · ');
       ctx.fillStyle = PALETTE.green;
-      ctx.font = `bold 18px ${FONT}`;
+      ctx.font = `bold 16px ${FONT}`;
       ctx.textAlign = 'center';
-      ctx.fillText(`Found: ${state.foundLabel}`, 640, 676);
+      ctx.fillText(`Found ${state.found.length}/${list.length}: ${names}`, 640, 684);
     }
     ctx.fillStyle = PALETTE.muted;
     ctx.font = `15px ${FONT}`;
@@ -246,7 +257,8 @@ export function createRenderer(canvas) {
       drawCard(
         'LANTERN LANE',
         [
-          'Find all 8 differences between pictures A and B.',
+          'Find all 8 differences: left is the Original,',
+          'right is Spot the Changes.',
           'Click a difference in either picture to mark it.',
           'Wrong clicks cost 25 points · hints cost 50.',
           'Beat the 2:30 clock on each of the 5 levels.',
